@@ -1,0 +1,22 @@
+{
+  "name": "multihm",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^1.4.0",
+    "kaboom": "^3000.0.15",
+    "socket.io-client": "^4.7.2"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^1.4.0",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.4"
+  }
+}
