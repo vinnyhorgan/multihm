@@ -9,12 +9,8 @@ const io = new Server({
 io.on("connection", (socket) => {
     console.log("User connected: " + socket.id);
 
-    socket.on("newPlayer", (data) => {
-        socket.broadcast.emit("newPlayer", data);
-    });
-
-    socket.on("playerMoved", (data) => {
-        socket.broadcast.emit("playerMoved", data);
+    socket.on("sync", (id, x, y, angle) => {
+        socket.broadcast.emit("sync", id, x, y, angle);
     });
 
     socket.on("disconnect", () => {

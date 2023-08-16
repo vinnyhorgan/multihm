@@ -1,82 +1,145 @@
 import kaboom from "kaboom";
 import { io } from "socket.io-client";
 
-const k = kaboom();
+const k = kaboom({
+    global: false,
+    scale: 3
+});
 const socket = io("http://localhost:3000");
 
-let players: { [key: string]: any } = {};
+k.debug.inspect = true;
 
-socket.on("connect", () => {
-    const player = {
-        id: socket.id,
-        x: Math.random() * 640,
-        y: Math.random() * 480,
-    };
-
-    socket.emit("newPlayer", player);
+k.loadSprite("pWalkShotgun", "src/assets/sprPWalkShotgun_strip8.png", {
+    sliceX: 8,
+    anims: {
+        idle: {
+            from: 0,
+            to: 0
+        },
+        walk: {
+            from: 0,
+            to: 7,
+            speed: 10,
+            loop: true
+        }
+    }
 });
 
-socket.on("newPlayer", (player) => {
-    let newPlayer = k.add([
-        k.sprite("bean"),
-        k.pos(player.x, player.y),
-    ]);
+let hue = 0;
 
-    console.log(newPlayer);
+function generateNetId() {
+    return Math.random().toString(36).substr(2, 9);
+}
 
-    players[player.id] = newPlayer;
+k.onUpdate(() => {
+    let toSync = k.get("sync");
+
+    toSync.forEach((obj) => {
+        socket.emit("sync", obj.netId, obj.pos.x, obj.pos.y, obj.angle);
+    });
+
+    hue += 0.001;
+
+    k.setBackground(k.Color.fromHSL(hue, 0.3, 0.3))
+
+    if (hue > 1) {
+        hue = 0;
+    }
 });
 
-socket.on("playerMoved", (player) => {
-    players[player.id].pos.x = player.x;
-    players[player.id].pos.y = player.y;
+socket.on("sync", (id, x, y, angle) => {
+    let obj = k.get("*").find((obj) => obj.netId === id);
+
+    if (obj) {
+        obj.pos.x = x;
+        obj.pos.y = y;
+        obj.angle = angle;
+    }
+    else
+    {
+        let newPlayer = k.add([
+            k.sprite("pWalkShotgun"),
+            k.pos(x, y),
+            k.anchor("center"),
+            k.rotate(angle),
+            {
+                netId: id,
+            }
+        ]);
+
+        newPlayer.flipX = true;
+    }
 });
 
-k.loadSprite("bean", "src/assets/bean.png");
-
-const SPEED = 320
+const SPEED = 200
 
 const player = k.add([
-    k.sprite("bean"),
-    k.pos(k.center())
+    k.sprite("pWalkShotgun"),
+    k.pos(k.center()),
+    k.anchor("center"),
+    k.rotate(0),
+    k.area(),
+    k.body(),
+    {
+        netId: generateNetId(),
+    },
+    "sync"
 ]);
 
-k.onKeyDown("left", () => {
-    player.move(-SPEED, 0)
+player.flipX = true;
 
-    socket.emit("playerMoved", {
-        id: socket.id,
-        x: player.pos.x,
-        y: player.pos.y,
-    });
-})
+player.onUpdate(() => {
+    player.angle = player.pos.angle(k.mousePos());
+});
 
-k.onKeyDown("right", () => {
-    player.move(SPEED, 0)
+k.onKeyDown("a", () => {
+    player.move(-SPEED, 0);
 
-    socket.emit("playerMoved", {
-        id: socket.id,
-        x: player.pos.x,
-        y: player.pos.y,
-    });
-})
+    if (player.curAnim() !== "walk")
+    {
+        player.play("walk");
+    }
+});
 
-k.onKeyDown("up", () => {
-    player.move(0, -SPEED)
+k.onKeyDown("d", () => {
+    player.move(SPEED, 0);
 
-    socket.emit("playerMoved", {
-        id: socket.id,
-        x: player.pos.x,
-        y: player.pos.y,
-    });
-})
+    if (player.curAnim() !== "walk")
+    {
+        player.play("walk");
+    }
+});
 
-k.onKeyDown("down", () => {
-    player.move(0, SPEED)
+k.onKeyDown("w", () => {
+    player.move(0, -SPEED);
 
-    socket.emit("playerMoved", {
-        id: socket.id,
-        x: player.pos.x,
-        y: player.pos.y,
-    });
-})
+    if (player.curAnim() !== "walk")
+    {
+        player.play("walk");
+    }
+});
+
+k.onKeyDown("s", () => {
+    player.move(0, SPEED);
+
+    if (player.curAnim() !== "walk")
+    {
+        player.play("walk");
+    }
+});
+
+k.onKeyRelease("w", () => {
+    player.play("idle");
+});
+
+k.onKeyRelease("s", () => {
+    player.play("idle");
+});
+
+k.onKeyRelease("a", () => {
+    player.play("idle");
+});
+
+k.onKeyRelease("d", () => {
+    player.play("idle");
+});
